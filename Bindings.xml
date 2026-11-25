@@ -1,0 +1,5 @@
+<Bindings>
+  <Binding name="TOGGLEEMOTEWHEEL" header="RadialEmotes" category="BINDING_HEADER_RADIALEMOTES" runOnUp="true">
+    RadialEmotes_Binding(keystate)
+  </Binding>
+</Bindings>

@@ -13,16 +13,15 @@ RadialEmotes is a World of Warcraft: Forever addon that lets you choose characte
 
 ## Install
 
-1. Download or clone this repository.
-2. Put the `RadialEmotes` folder, including `RadialEmotes.toc`, `RadialEmotes.lua`, `Bindings.xml`, and the artwork files, in your WoW Forever AddOns directory:
+Download RadialEmotes from the [CurseForge project page](https://www.curseforge.com/wow/addons/radialemotes).
 
-   ```text
-   World of Warcraft/_forever_/Interface/AddOns/RadialEmotes/
-   ```
+To install from this source repository, put the `RadialEmotes` folder, including `RadialEmotes.toc`, `RadialEmotes.lua`, `Bindings.xml`, and the artwork files, in your WoW Forever AddOns directory:
 
-3. Enable **RadialEmotes** on the character selection AddOns screen, then enter the game or reload the UI with `/reload`.
+```text
+World of Warcraft/_forever_/Interface/AddOns/RadialEmotes/
+```
 
-If you downloaded a release archive, extract it so the `.toc` file is directly inside the `RadialEmotes` folder. Avoid an extra nested folder such as `AddOns/RadialEmotes/RadialEmotes/RadialEmotes.toc`.
+Enable **RadialEmotes** on the character selection AddOns screen, then enter the game or reload the UI with `/reload`.
 
 ## Use
 
