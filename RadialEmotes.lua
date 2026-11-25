@@ -75,7 +75,29 @@ local function PageSize()
     return math.max(6, math.min(MAX_PAGE_SIZE, tonumber(EmoteWheelForeverDB.pageSize) or DEFAULTS.pageSize))
 end
 
+local function RecordRecent(token)
+    if type(EmoteWheelForeverDB.recents) ~= "table" then
+        EmoteWheelForeverDB.recents = {}
+    end
+    for i = #EmoteWheelForeverDB.recents, 1, -1 do
+        if EmoteWheelForeverDB.recents[i] == token then
+            table.remove(EmoteWheelForeverDB.recents, i)
+        end
+    end
+    table.insert(EmoteWheelForeverDB.recents, 1, token)
+    while #EmoteWheelForeverDB.recents > MAX_PAGE_SIZE do
+        table.remove(EmoteWheelForeverDB.recents)
+    end
+end
+
+local specialEmoteLabels = {
+    coverears = "Cover Ears", followme = "Follow Me", golfclap = "Golf Clap",
+    helpme = "Help Me", highfive = "High Five", mountspecial = "Mount Special",
+    openfire = "Open Fire",
+}
+
 local function makeLabel(token)
+    if specialEmoteLabels[token] then return specialEmoteLabels[token] end
     return token:gsub("^%l", string.upper):gsub("(%l)(%u)", "%1 %2")
 end
 
@@ -83,12 +105,25 @@ local function updatePage()
     -- Secure action attributes and protected button visibility are locked in combat.
     if InCombatLockdown and InCombatLockdown() then return end
     local perPage = PageSize()
-    local pages = math.max(1, math.ceil(#emotes / perPage))
+    local hasRecents = type(EmoteWheelForeverDB.recents) == "table" and #EmoteWheelForeverDB.recents > 0
+    local emotePages = math.max(1, math.ceil(#emotes / perPage))
+    local pages = emotePages + (hasRecents and 1 or 0)
     page = math.max(1, math.min(page, pages))
-    wheel.selectionText:SetText("CLICK AN EMOTE  ·  SCROLL TO BROWSE")
+    local showingRecents = hasRecents and page == 1
+    local emotePage = page - (hasRecents and 1 or 0)
+    if pages > 1 then
+        wheel.subtitle:SetText(EmoteWheelForeverDB.mouseWheelPaging and "CLICK TO PERFORM  ·  SCROLL TO BROWSE" or "CLICK TO PERFORM  ·  USE ARROWS")
+    else
+        wheel.subtitle:SetText("CLICK AN EMOTE TO PERFORM")
+    end
+    wheel.selectionText:SetText(showingRecents and "RECENT EMOTES" or "ALL EMOTES")
     for i, button in ipairs(buttons) do
-        local index = (page - 1) * perPage + i
-        local token = i <= perPage and emotes[index] or nil
+        local index = showingRecents and i or (emotePage - 1) * perPage + i
+        local token
+        if i <= perPage then
+            token = showingRecents and EmoteWheelForeverDB.recents[index] or nil
+            if not showingRecents then token = emotes[index] end
+        end
         if token then
             local angle = math.rad(90 - (i - 1) * (360 / perPage))
             button:ClearAllPoints()
@@ -107,9 +142,13 @@ local function updatePage()
             button:Hide()
         end
     end
-    wheel.pageText:SetText((page .. " / " .. pages))
+    wheel.pageText:SetText(string.format("%02d  /  %02d", page, pages))
     wheel.prev:SetEnabled(page > 1)
     wheel.next:SetEnabled(page < pages)
+    wheel.prev:SetBackdropColor(page > 1 and 0.055 or 0.035, page > 1 and 0.105 or 0.06, page > 1 and 0.14 or 0.08, 0.96)
+    wheel.next:SetBackdropColor(page < pages and 0.055 or 0.035, page < pages and 0.105 or 0.06, page < pages and 0.14 or 0.08, 0.96)
+    wheel.prev.label:SetTextColor(page > 1 and 0.76 or 0.34, page > 1 and 0.91 or 0.42, page > 1 and 1 or 0.5)
+    wheel.next.label:SetTextColor(page < pages and 0.76 or 0.34, page < pages and 0.91 or 0.42, page < pages and 1 or 0.5)
 end
 
 local function createWheel()
@@ -140,16 +179,19 @@ local function createWheel()
 
     wheel.title = wheel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     wheel.title:SetPoint("TOP", 0, -12)
-    wheel.title:SetText("RADIALEMOTES")
-    wheel.title:SetTextColor(0.78, 0.92, 1)
+    wheel.title:SetText("EMOTE WHEEL")
+    wheel.title:SetTextColor(0.86, 0.95, 1)
+    wheel.title:SetShadowColor(0, 0, 0, 0.8)
+    wheel.title:SetShadowOffset(0, -1)
 
     wheel.subtitle = wheel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     wheel.subtitle:SetPoint("TOP", wheel.title, "BOTTOM", 0, -3)
-    wheel.subtitle:SetText("HOLD YOUR KEY  ·  SCROLL TO BROWSE")
+    wheel.subtitle:SetText("CLICK TO PERFORM  ·  SCROLL TO BROWSE")
+    wheel.subtitle:SetTextColor(0.48, 0.7, 0.8)
 
     -- Center target medallion, echoing the focal point of WoW's ping wheel.
     wheel.targetPanel = CreateFrame("Frame", nil, wheel, "BackdropTemplate")
-    wheel.targetPanel:SetSize(160, 160)
+    wheel.targetPanel:SetSize(166, 166)
     wheel.targetPanel:SetPoint("CENTER")
     wheel.targetPanel:SetFrameLevel(wheel:GetFrameLevel() + 1)
     wheel.targetPanel.backdropTexture = wheel.targetPanel:CreateTexture(nil, "BACKGROUND")
@@ -157,8 +199,8 @@ local function createWheel()
     wheel.targetPanel.backdropTexture:SetAllPoints()
 
     wheel.targetPortrait = wheel.targetPanel:CreateTexture(nil, "ARTWORK")
-    wheel.targetPortrait:SetSize(56, 56)
-    wheel.targetPortrait:SetPoint("TOP", 0, -22)
+    wheel.targetPortrait:SetSize(64, 64)
+    wheel.targetPortrait:SetPoint("TOP", 0, -19)
 
     wheel.targetCaption = wheel.targetPanel:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     wheel.targetCaption:SetPoint("TOP", wheel.targetPortrait, "BOTTOM", 0, -5)
@@ -167,14 +209,15 @@ local function createWheel()
 
     wheel.targetName = wheel.targetPanel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     wheel.targetName:SetPoint("TOP", wheel.targetCaption, "BOTTOM", 0, -4)
-    wheel.targetName:SetWidth(136)
-    wheel.targetName:SetHeight(34)
+    wheel.targetName:SetWidth(140)
+    wheel.targetName:SetHeight(36)
     wheel.targetName:SetWordWrap(true)
     wheel.targetName:SetJustifyH("CENTER")
 
     wheel.targetHint = wheel.targetPanel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     wheel.targetHint:SetPoint("BOTTOM", 0, 13)
     wheel.targetHint:SetText("CURRENT TARGET")
+    wheel.targetHint:SetTextColor(0.42, 0.64, 0.73)
 
     local function refreshTarget()
         if UnitExists and UnitExists("target") then
@@ -194,28 +237,73 @@ local function createWheel()
     wheel:SetScript("OnEvent", refreshTarget)
 
     wheel.pageText = wheel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    wheel.pageText:SetPoint("BOTTOM", 0, 31)
-    wheel.pageText:SetTextColor(0.45, 0.75, 0.88)
+    wheel.pageText:SetTextColor(0.72, 0.88, 0.95)
+    wheel.pageText:SetText("01  /  01")
+    wheel.pageText:SetShadowColor(0, 0, 0, 0.8)
+    wheel.pageText:SetShadowOffset(0, -1)
 
     wheel.selectionText = wheel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     wheel.selectionText:SetPoint("TOP", wheel.targetPanel, "BOTTOM", 0, -13)
     wheel.selectionText:SetTextColor(0.55, 0.85, 0.95)
-    wheel.selectionText:SetText("CLICK AN EMOTE  ·  SCROLL TO BROWSE")
+    wheel.selectionText:SetText("ALL EMOTES")
+    wheel.selectionText:SetJustifyH("CENTER")
+    wheel.selectionText:SetWidth(220)
+    wheel.selectionText:SetShadowColor(0, 0, 0, 0.8)
+    wheel.selectionText:SetShadowOffset(0, -1)
 
-    wheel.prev = CreateFrame("Button", nil, wheel, "UIPanelButtonTemplate")
-    wheel.prev:SetSize(88, 26)
-    wheel.prev:SetPoint("BOTTOM", -56, 28)
-    wheel.prev:SetText("‹ PREV")
+    wheel.navBar = CreateFrame("Frame", nil, wheel, "BackdropTemplate")
+    wheel.navBar:SetSize(220, 42)
+    wheel.navBar:SetPoint("BOTTOM", 0, 14)
+    wheel.navBar:SetFrameLevel(wheel:GetFrameLevel() + 1)
+    wheel.navBar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8X8",
+        edgeFile = "Interface\\Buttons\\WHITE8X8",
+        edgeSize = 1,
+        insets = { left = 1, right = 1, top = 1, bottom = 1 },
+    })
+    wheel.navBar:SetBackdropColor(0.018, 0.035, 0.05, 0.94)
+    wheel.navBar:SetBackdropBorderColor(0.12, 0.26, 0.34, 0.8)
+    wheel.pageText:SetPoint("CENTER", wheel.navBar, "CENTER")
+
+    local function CreateNavButton(label, point, relativePoint, tooltipText)
+        local button = CreateFrame("Button", nil, wheel.navBar, "BackdropTemplate")
+        button:SetSize(54, 30)
+        button:SetPoint(point, wheel.navBar, relativePoint, point == "LEFT" and 7 or -7, 0)
+        button:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 },
+        })
+        button:SetBackdropColor(0.055, 0.105, 0.14, 0.96)
+        button:SetBackdropBorderColor(0.18, 0.37, 0.46, 0.9)
+        button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        button.label:SetPoint("CENTER", 0, 1)
+        button.label:SetText(label)
+        button.label:SetTextColor(0.76, 0.91, 1)
+        button:SetScript("OnEnter", function(self)
+            self:SetBackdropColor(0.08, 0.29, 0.38, 1)
+            self:SetBackdropBorderColor(0.32, 0.72, 0.85, 1)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText(tooltipText)
+            GameTooltip:Show()
+        end)
+        button:SetScript("OnLeave", function(self)
+            self:SetBackdropColor(0.055, 0.105, 0.14, 0.96)
+            self:SetBackdropBorderColor(0.18, 0.37, 0.46, 0.9)
+            GameTooltip:Hide()
+        end)
+        return button
+    end
+
+    wheel.prev = CreateNavButton("‹", "LEFT", "LEFT", "Previous page")
     wheel.prev:SetScript("OnClick", function()
         if InCombatLockdown and InCombatLockdown() then return end
         page = page - 1
         updatePage()
     end)
 
-    wheel.next = CreateFrame("Button", nil, wheel, "UIPanelButtonTemplate")
-    wheel.next:SetSize(88, 26)
-    wheel.next:SetPoint("BOTTOM", 56, 28)
-    wheel.next:SetText("NEXT ›")
+    wheel.next = CreateNavButton("›", "RIGHT", "RIGHT", "Next page")
     wheel.next:SetScript("OnClick", function()
         if InCombatLockdown and InCombatLockdown() then return end
         page = page + 1
@@ -231,26 +319,40 @@ local function createWheel()
         -- Fire as soon as the emote is pressed, so selecting does not require
         -- holding the mouse button and dragging the camera.
         button:SetAttribute("useOnKeyDown", true)
-        button:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 } })
-        button:SetBackdropColor(0.045, 0.075, 0.1, 0.96)
-        button:SetBackdropBorderColor(0.25, 0.42, 0.52, 0.9)
+        button:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8X8",
+            edgeFile = "Interface\\Buttons\\WHITE8X8",
+            edgeSize = 1,
+            insets = { left = 1, right = 1, top = 1, bottom = 1 },
+        })
+        button:SetBackdropColor(0.025, 0.052, 0.07, 0.96)
+        button:SetBackdropBorderColor(0.15, 0.31, 0.4, 0.9)
         button.label = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         button.label:SetPoint("CENTER")
         button.label:SetWidth(92)
         button.label:SetWordWrap(false)
         button:SetScript("OnEnter", function(self)
-            self:SetBackdropColor(0.08, 0.35, 0.46, 1)
-            self:SetBackdropBorderColor(0.35, 0.85, 1, 1)
+            self:SetBackdropColor(0.055, 0.2, 0.27, 1)
+            self:SetBackdropBorderColor(0.38, 0.78, 0.92, 1)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             GameTooltip:SetText("/" .. self.token, 1, 0.82, 0.25)
+            GameTooltip:AddLine("Click to perform", 0.72, 0.82, 0.88)
             GameTooltip:Show()
         end)
         button:SetScript("OnLeave", function(self)
-            self:SetBackdropColor(0.045, 0.075, 0.1, 0.96)
-            self:SetBackdropBorderColor(0.25, 0.42, 0.52, 0.9)
+            self:SetBackdropColor(0.025, 0.052, 0.07, 0.96)
+            self:SetBackdropBorderColor(0.15, 0.31, 0.4, 0.9)
             GameTooltip:Hide()
         end)
-        button:SetScript("PostClick", function(_, _, down)
+        button:SetScript("PostClick", function(self, _, down)
+            if down then
+                local hadRecents = type(EmoteWheelForeverDB.recents) == "table" and #EmoteWheelForeverDB.recents > 0
+                RecordRecent(self.token)
+                if not (InCombatLockdown and InCombatLockdown()) then
+                    if not hadRecents then page = page + 1 end
+                    updatePage()
+                end
+            end
             if down and EmoteWheelForeverDB.closeAfterSelect and not (InCombatLockdown and InCombatLockdown()) then
                 wheel:Hide()
             end
@@ -278,6 +380,7 @@ local function createWheel()
 end
 
 function RadialEmotes_Toggle()
+    if InCombatLockdown and InCombatLockdown() then return end
     if not wheel then createWheel() end
     if wheel:IsShown() then
         wheel:Hide()
@@ -386,6 +489,10 @@ end
 
 function RadialEmotes_Binding(keystate)
     if keystate == "down" then
+        if InCombatLockdown and InCombatLockdown() then
+            wheelKeyHeld = false
+            return
+        end
         -- Ignore key-repeat so one held press keeps the wheel steadily open.
         if wheelKeyHeld then return end
         wheelKeyHeld = true
@@ -395,7 +502,9 @@ function RadialEmotes_Binding(keystate)
         wheel:Show()
     elseif keystate == "up" then
         wheelKeyHeld = false
-        if wheel and wheel:IsShown() then wheel:Hide() end
+        if wheel and wheel:IsShown() and not (InCombatLockdown and InCombatLockdown()) then
+            wheel:Hide()
+        end
     end
 end
 

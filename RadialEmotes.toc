@@ -2,7 +2,7 @@
 ## Title: RadialEmotes
 ## Notes: A polished radial wheel for character emotes.
 ## Author: RadialEmotes contributors
-## Version: 1.1.2
+## Version: 1.2.0
 ## Category: Social
 ## IconTexture: Interface\Icons\INV_Misc_EmotionHappy
 ## X-License: MIT

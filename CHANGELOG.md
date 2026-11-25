@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Added a Recent Emotes page that keeps up to 12 unique selections, newest first.
+- Refined the wheel layout, page navigation, hover states, and emote tooltips.
+- Prevented the wheel from opening during combat and ensured it closes when combat starts.
+
 ## 1.1.2
 
 - Fixed the wheel backdrop so only the circle is drawn; the area around it stays transparent.

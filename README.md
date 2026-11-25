@@ -5,6 +5,7 @@ RadialEmotes is a World of Warcraft: Forever addon that lets you choose characte
 ## Features
 
 - Browse the emote list in pages, using the mouse wheel or the **Prev** and **Next** buttons.
+- Reuse recently selected emotes from a first page that updates automatically.
 - See your current target's portrait and name in the center of the wheel, or hide that panel in settings.
 - Choose between 6 and 12 emotes per page, and adjust the wheel size.
 - Keep the wheel open after choosing an emote, or have it close automatically.
@@ -25,7 +26,7 @@ Enable **RadialEmotes** on the character selection AddOns screen, then enter the
 
 ## Use
 
-Set the hold key under **Options → Key Bindings → RadialEmotes → Hold Emote Wheel**. Hold it to display the wheel, click an emote to perform it, then release the key to hide the wheel. You can also use the mouse wheel or the on-screen buttons to change pages. Press **Escape** to hide the wheel.
+Set the hold key under **Options → Key Bindings → RadialEmotes → Hold Emote Wheel**. Hold it to display the wheel, click an emote to perform it, then release the key to hide the wheel. Your most recently selected unique emotes appear on the **Recent Emotes** page, newest first. Use the mouse wheel or the on-screen buttons to change pages. Press **Escape** to hide the wheel.
 
 These commands toggle the wheel:
 
